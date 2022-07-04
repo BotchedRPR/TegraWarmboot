@@ -72,8 +72,16 @@
 #define CLK_RST_CONTROLLER_CLK_SOURCE_UART 		CLK_RST_CONTROLLER_CLK_SOURCE_UARTA_0
 #define UART_CAR_MASK 					UARTA_CAR_MASK
 
+
+//LP0 sleep register definition
+#define APBDEV_PMC_WAKE_MASK_0		(0x00c)
+#define APBDEV_PMC_DPD_SAMPLE_0		(0x020)
+#define APBDEV_PMC_DPD_ENABLE_0		(0x024)
+#define APBDEV_PMC_WAKE_LVL_0		(0x010)
+#define APBDEV_PMC_SCRATCH39_0		(0x138)
 void uart_print(const char *string);
 void uart_init();
+void setup_LP0();
 char* utoa(unsigned int value, char* result, int base);
 
 // These are defined in payload_asm.S
@@ -90,12 +98,11 @@ void main()
 	// Execute the assembly code, which prints some important registers 
 	// and makes sure we are executing in secure mode.
 	print_regs();
-	//set_cpsr();
+	//set_cpsr();00ch
 
-	uart_print("Executed print_regs()! Jumping to uboot!\r\n");
-
-	void (*foo)(void) = (void (*)())0x84000000;
-	foo();
+	uart_print("Executed print_regs(). Setting up LP0 registers.\r\n");
+	//UBoot is loaded at 0x84000000
+	setup_LP0();
 
 	uart_print("Error. Uboot returned (or was not exeucted at all). Going into a dead loop!\r\n");
 
@@ -177,7 +184,7 @@ void uart_print(const char *string) {
 		// put the char into the tx fifo
 		reg_write(UART_BASE, UART_THR_DLAB, (char) *string);
 
-		// wait for tx fifo to clear
+		// wait for tx fifo to clear_
 		while(!((reg_read(UART_BASE, UART_LSR) >> 5) & 0x01));
 
 		// move on to next char
@@ -225,4 +232,13 @@ void uart_init() {
 		/* prevent this uart-N initialization from being done on subsequent calls to uart_print() */
 		reg_write(PMC_BASE, APBDEV_PMC_SCRATCH42_0, MAGIC_VALUE);
 	}
+}
+void setup_LP0()
+{
+	/* Setting our own wake levels (for VOL- and TBD RTC) */
+	reg_write(PMC_BASE, APBDEV_PMC_WAKE_MASK_0, 0x00001 << 26);
+	reg_write(PMC_BASE, APBDEV_PMC_SCRATCH39_0, 0x84000000);
+	/* Setting needed LP0 pin sampling and going into LP0 */
+	reg_write(PMC_BASE, APBDEV_PMC_DPD_SAMPLE_0, 0x1);
+	reg_write(PMC_BASE, APBDEV_PMC_DPD_ENABLE_0, 0x1);
 }

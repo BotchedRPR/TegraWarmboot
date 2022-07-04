@@ -23,7 +23,7 @@ CFLAGS = \
 	-O0 \
 	-mcpu=cortex-a9
 
-LDFLAGS = -nostdlib -L /usr/lib/gcc/arm-none-eabi/9.2.1 -lgcc
+LDFLAGS = -nostdlib -L /usr/lib/gcc/arm-none-eabi/11.1.0 -lgcc
 
 all: payload.bin
 
